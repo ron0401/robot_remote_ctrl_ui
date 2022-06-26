@@ -1,0 +1,15 @@
+{
+    "IMAGE_SERVER":
+    {
+        "HOST": "localhost",
+        "PORT": "8080",
+        "TOPIC": "/camera/rgb/image_raw"
+    },
+    "ROSBRIDGE_SEVER":
+    {
+        "HOST": "localhost",
+        "PORT": "9090",
+        "JOY_TOPIC": "/joy",
+        "ODOM_TOPIC": "/odom"
+    }
+}

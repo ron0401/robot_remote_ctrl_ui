@@ -9,7 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 
-    <title>Document</title>
+    <title>Robot Remote Control View</title>
     <style type="text/css">
         h1 {font-size: 60px; color: yellow;}
     </style>
@@ -17,145 +17,141 @@
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#"><h1>Husky Remote Control View</h1></a>
+            <a class="navbar-brand" href="#"><h1>Robot Remote Control View</h1></a>
             </div>
-        <!-- Navbar content -->
     </nav>
 
-        <div class="row">
-          <div class="col bg-dark">
-            Column
-          </div>
-          <div class="col bg-dark">
-            <div>
-                <img src="http://{{myip}}:50000/stream?topic=/realsense/color/image_raw&type=ros_compressed">
-            </div>
-          </div>
-          <div class="col bg-dark">
-            <div id="greet"><div>
-          </div>
+    <div class="row">
+        <div class="col bg-dark">
         </div>
-
-        
+        <div class="col bg-dark">
+        <div>
+            <img src="http://{{IMAGE_SERVER.HOST}}:{{IMAGE_SERVER.PORT}}/stream?topic={{IMAGE_SERVER.TOPIC}}">
+        </div>
+        </div>
+        <div class="col bg-dark">
+        <div id="greet"><div>
+        </div>
+    </div>
  
-        <script>
-            var haveEvents = 'GamepadEvent' in window;
-            var controllers = {};
-            var rAF = window.requestAnimationFrame;
+    <script>
+        var haveEvents = 'GamepadEvent' in window;
+        var controllers = {};
+        var rAF = window.requestAnimationFrame;
 
-            var ros = new ROSLIB.Ros({
-                url : 'ws://localhost:9090'
-            });
-            // ros.on('connection', function() {
-            //     alert("Connected");
-            // });
+        var ros = new ROSLIB.Ros({
+            url : 'ws://{{ROSBRIDGE_SEVER.HOST}}:{{ROSBRIDGE_SEVER.PORT}}'
+        });
+        // ros.on('connection', function() {
+        //     alert("Connected");
+        // });
 
-            ros.on('error', function(error) {
-                alert("ERROR");
-            });
+        ros.on('error', function(error) {
+            alert("ERROR");
+        });
 
-            ros.on('close', function() {
-                alert("CLOSED Connection");
-            });
-            var destinationPub = new ROSLIB.Topic({
-                ros : ros,
-                name : '/joy',
-                messageType : 'sensor_msgs/Joy'
-            });
-            let ctrlaxis = []
-            let ctrlbut = []
-            var dest = new ROSLIB.Message({
-                axes: ctrlaxis,
-                buttons: ctrlbut
-            });
-            let enebledPub = false
-            
-            const countUp = () => {
-                if (enebledPub) {
-                    destinationPub.publish(dest);
-                }
+        ros.on('close', function() {
+            alert("CLOSED Connection");
+        });
+        var destinationPub = new ROSLIB.Topic({
+            ros : ros,
+            name : '{{ROSBRIDGE_SEVER.JOY_TOPIC}}',
+            messageType : 'sensor_msgs/Joy'
+        });
+        let ctrlaxis = []
+        let ctrlbut = []
+        var dest = new ROSLIB.Message({
+            axes: ctrlaxis,
+            buttons: ctrlbut
+        });
+        let enebledPub = false
+        
+        const countUp = () => {
+            if (enebledPub) {
+                destinationPub.publish(dest);
             }
+        }
 
-            setInterval(countUp, 100);
+        setInterval(countUp, 100);
 
-            const orderSub = new ROSLIB.Topic({
-                ros : ros,
-                name : '/husky_velocity_controller/odom',
-                messageType : 'nav_msgs/Odometry'
-            });
-            orderSub.subscribe(message => {
-                var data = message.twist.twist.linear.x;
-                var greet = document.getElementById('greet');
-                data = data * 3600 / 1000
-                greet.innerHTML = '<h1> Liner Speed: <br> '  + data.toFixed(1) + ' km/h</h1>';
-            });
+        const orderSub = new ROSLIB.Topic({
+            ros : ros,
+            name : '{{ROSBRIDGE_SEVER.ODOM_TOPIC}}',
+            messageType : 'nav_msgs/Odometry'
+        });
+        orderSub.subscribe(message => {
+            var data = message.twist.twist.linear.x;
+            var greet = document.getElementById('greet');
+            data = data * 3600 / 1000
+            greet.innerHTML = '<h1> Liner Speed: <br> '  + data.toFixed(1) + ' km/h</h1>';
+        });
 
-            function connectHandler(e) {
-                addGamepad(e.gamepad);
-            }
-            function addGamepad(gamepad) {
-                controllers[gamepad.index] = gamepad;
-                rAF(updateStatus);
-            }
+        function connectHandler(e) {
+            addGamepad(e.gamepad);
+        }
+        function addGamepad(gamepad) {
+            controllers[gamepad.index] = gamepad;
+            rAF(updateStatus);
+        }
 
-            function disconnectHandler(e) {
-                removeGamepad(e.gamepad);
-            }
+        function disconnectHandler(e) {
+            removeGamepad(e.gamepad);
+        }
 
-            function removeGamepad(gamepad) {
-                var d = document.getElementById("controller" + gamepad.index);
-                document.body.removeChild(d);
-                delete controllers[gamepad.index];
-            }
+        function removeGamepad(gamepad) {
+            var d = document.getElementById("controller" + gamepad.index);
+            document.body.removeChild(d);
+            delete controllers[gamepad.index];
+        }
 
-            function updateStatus() {
-                scanGamepads();
-                for (j in controllers) {
-                    var controller = controllers[j];
-                    var d = document.getElementById("controller" + j);
-                    for (var i = 0; i < controller.buttons.length; i++) {
-                        var val = controller.buttons[i];
-                        var pressed = val == 1.0;
-                        if (typeof (val) == "object") {
-                            pressed = val.pressed;
-                            val = val.value;
-                        }
-                        var pct = Math.round(val * 100) + "%";
-                        if (pressed) {
-                            ctrlbut[i] = 1;
-                        } else {
-                            ctrlbut[i] = 0;
-                        }
+        function updateStatus() {
+            scanGamepads();
+            for (j in controllers) {
+                var controller = controllers[j];
+                var d = document.getElementById("controller" + j);
+                for (var i = 0; i < controller.buttons.length; i++) {
+                    var val = controller.buttons[i];
+                    var pressed = val == 1.0;
+                    if (typeof (val) == "object") {
+                        pressed = val.pressed;
+                        val = val.value;
                     }
-
-                    for (var i = 0; i < controller.axes.length; i++) {
-                        ctrlaxis[i] = controller.axes[i] * -1;
-                    }
-                    enebledPub = true
-                }
-                rAF(updateStatus);
-            }
-
-            function scanGamepads() {
-                var gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-                for (var i = 0; i < gamepads.length; i++) {
-                    if (gamepads[i]) {
-                        if (!(gamepads[i].index in controllers)) {
-                            addGamepad(gamepads[i]);
-                        } else {
-                            controllers[gamepads[i].index] = gamepads[i];
-                        }
+                    var pct = Math.round(val * 100) + "%";
+                    if (pressed) {
+                        ctrlbut[i] = 1;
+                    } else {
+                        ctrlbut[i] = 0;
                     }
                 }
-            }
 
-            if (haveEvents) {
-                window.addEventListener("gamepadconnected", connectHandler);
-                window.addEventListener("gamepaddisconnected", disconnectHandler);
-            } else {
-                setInterval(scanGamepads, 500);
-            }           
-        </script>
+                for (var i = 0; i < controller.axes.length; i++) {
+                    ctrlaxis[i] = controller.axes[i] * -1;
+                }
+                enebledPub = true
+            }
+            rAF(updateStatus);
+        }
+
+        function scanGamepads() {
+            var gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            for (var i = 0; i < gamepads.length; i++) {
+                if (gamepads[i]) {
+                    if (!(gamepads[i].index in controllers)) {
+                        addGamepad(gamepads[i]);
+                    } else {
+                        controllers[gamepads[i].index] = gamepads[i];
+                    }
+                }
+            }
+        }
+
+        if (haveEvents) {
+            window.addEventListener("gamepadconnected", connectHandler);
+            window.addEventListener("gamepaddisconnected", disconnectHandler);
+        } else {
+            setInterval(scanGamepads, 500);
+        }           
+    </script>
 
 </body>
 </html>
